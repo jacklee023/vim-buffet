@@ -66,6 +66,7 @@ if !exists("g:buffet_hidden_buffers")
 endif
 
 let g:buffet_prefix = "Buffet"
+
 let g:buffet_has_separator = {
             \     "Tab": {
             \         "Tab": g:buffet_separator,
@@ -77,14 +78,30 @@ let g:buffet_has_separator = {
             \         "CurrentBuffer": g:buffet_separator,
             \         "ActiveBuffer": g:buffet_separator,
             \         "ModBuffer": g:buffet_separator,
-            \         "ModActiveBuffer": g:buffet_separator,
-            \         "ModCurrentBuffer": g:buffet_separator,
             \     },
             \     "RightTrunc": {
             \         "Tab": g:buffet_separator,
             \         "End": g:buffet_separator,
             \     },
             \ }
+
+" let g:buffet_has_separator = {
+"             \     "Tab": {
+"             \         "Tab": '',
+"             \         "LeftTrunc": g:buffet_separator,
+"             \         "End" : g:buffet_separator,
+"             \     },
+"             \     "LeftTrunc": {
+"             \         "Buffer": g:buffet_separator,
+"             \         "CurrentBuffer": g:buffet_separator,
+"             \         "ActiveBuffer": g:buffet_separator,
+"             \         "ModBuffer": g:buffet_separator,
+"             \     },
+"             \     "RightTrunc": {
+"             \         "Tab": '',
+"             \         "End": g:buffet_separator,
+"             \     },
+"             \ }
 
 let g:buffet_buffer_types = [
             \    "Buffer",
@@ -241,11 +258,34 @@ endfunction
 
 let g:buffet_bwipe_filters = ["buffet#bwipe_nerdtree_filter"]
 
-for s:n in range(1, g:buffet_max_plug)
+for s:n in range(0, g:buffet_max_plug)
     execute printf("noremap <silent> <Plug>BuffetSwitch(%d) :call buffet#bswitch(%d)<cr>", s:n, s:n)
 endfor
 
 command! -bang -complete=buffer -nargs=? Bw call buffet#bwipe(<q-bang>, <q-args>)
 command! -bang -complete=buffer -nargs=? Bonly call buffet#bonly(<q-bang>, <q-args>)
 
-set tabline=%!buffet#render()
+command! -nargs=1 B            call buffet#bswitch(<f-args>)
+command! -nargs=1 Bu           call buffet#bswitch(<f-args>)
+command! -nargs=1 Buf          call buffet#bswitch(<f-args>)
+command! -nargs=1 Buffer       call buffet#bswitch(<f-args>)
+command! -nargs=1 BufferSwitch call buffet#bswitch(<f-args>)
+
+command -nargs=0 Bn call buffet#nextbuf()
+command -nargs=0 Bp call buffet#prevbuf()
+command -nargs=0 BN call buffet#nextbuf()
+command -nargs=0 BP call buffet#prevbuf()
+
+command -nargs=0 Bfirst call buffet#firstbuf()
+command -nargs=0 Bnext  call buffet#nextbuf()
+command -nargs=0 Bprev  call buffet#prevbuf()
+command -nargs=0 Blast  call buffet#lastbuf()
+
+nnoremap <silent> <leader>bp    :Bnext<cr>
+nnoremap <silent> <leader>bn    :Bprev<cr>
+nnoremap <silent>         [B    :Bfirst<Cr>
+nnoremap <silent>         [b    :Bnext<cr>
+nnoremap <silent>         ]b    :Bprev<cr>
+nnoremap <silent>         ]B    :Blast<Cr>
+
+" set tabline=%!buffet#render()

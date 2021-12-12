@@ -15,6 +15,32 @@ let s:largest_buffer_id = 1
 " either a slash or backslash
 let s:path_separator = fnamemodify(getcwd(),':p')[-1:]
 
+let s:tab_count_icons = get(g:, 'buffet_tab_count_icons', {
+      \ 1: "",
+      \ 2: "",
+      \ 3: "",
+      \ 4: "",
+      \ 5: "",
+      \ 6: "",
+      \ 7: "",
+      \ 8: "",
+      \ 9: "",
+      \ -1: "",
+      \})
+
+let s:tab_index_icons = get(g:, 'buffet_tab_index_icons', {
+      \ 1: "",
+      \ 2: "",
+      \ 3: "",
+      \ 4: "",
+      \ 5: "",
+      \ 6: "",
+      \ 7: "",
+      \ 8: "",
+      \ 9: "",
+      \ -1: "",
+      \})
+
 function! buffet#update()
     let largest_buffer_id = max([bufnr('$'), s:largest_buffer_id])
 
@@ -63,7 +89,7 @@ function! buffet#update()
         let buffer = {}
         let buffer.head = split(buffer_head, s:path_separator)
         let buffer.not_new = len(buffer_tail)
-        let buffer.tail = buffer.not_new ? buffer_tail : g:buffet_new_buffer_name 
+        let buffer.tail = buffer.not_new ? buffer_tail : g:buffet_new_buffer_name
 
         " Update the buffers map
         let s:buffers[buffer_id] = buffer
@@ -262,7 +288,21 @@ function! s:Render()
     let sep_len = s:Len(g:buffet_separator)
 
     let tabs_count = tabpagenr("$")
-    let tabs_len = (1 + s:Len(g:buffet_tab_icon) + 1 + sep_len) * tabs_count
+    let tabs_index = tabpagenr()
+    " let tabs_len = (1 + s:Len(g:buffet_tab_icon) + 1 + sep_len) * tabs_count
+
+    let render = ""
+    if tabs_count > 1
+        let render    .= s:GetTypeHighlight("Tab")
+        let tab_name   = lightline#tab#filename(tabs_index)
+        let tab_count  = get(s:tab_count_icons, tabs_count, s:tab_count_icons[-1])
+        let tab_index  = get(s:tab_index_icons, tabs_index, s:tab_index_icons[-1])
+        let tab_text   = printf("%s %s|%s %s", g:buffet_tab_icon, tab_index, tab_count, tab_name)
+        let render    .= tab_text
+    else
+        let tab_text = ""
+    endif
+    let tabs_len = s:Len(tab_text)
 
     let left_trunc_len = 1 + s:Len(g:buffet_left_trunc_icon) + 1 + 2 + 1 + sep_len
     let right_trunc_len =  1 + 2 + 1 + s:Len(g:buffet_right_trunc_icon) + 1 + sep_len
@@ -273,7 +313,6 @@ function! s:Render()
 
     let elements = s:GetAllElements(capacity, buffer_padding)
 
-    let render = ""
     for i in range(0, len(elements) - 2)
         let left = elements[i]
         let elem = left
@@ -295,8 +334,8 @@ function! s:Render()
         let icon = ""
         if g:buffet_use_devicons && s:IsBufferElement(elem)
             let icon = " " . WebDevIconsGetFileTypeSymbol(elem.value)
-        elseif elem.type == "Tab"
-            let icon = " " . g:buffet_tab_icon
+        " elseif elem.type == "Tab"
+            " let icon = " " . g:buffet_tab_icon
         endif
 
         let render = render . icon
@@ -311,11 +350,13 @@ function! s:Render()
             endif
         endif
 
-        let render = render . " "
+        if elem.type != "Tab"
+            let render = render . " "
 
-        let separator =  g:buffet_has_separator[left.type][right.type]
-        let separator_hi = s:GetTypeHighlight(left.type . right.type)
-        let render = render . separator_hi . separator
+            let separator =  g:buffet_has_separator[left.type][right.type]
+            let separator_hi = s:GetTypeHighlight(left.type . right.type)
+            let render = render . separator_hi . separator
+        endif
 
         if elem.type == "Tab" && has("nvim")
             let render = render . "%T"
@@ -352,7 +393,7 @@ endfunction
 
 function! buffet#bswitch(index)
     let i = str2nr(a:index) - 1
-    if i < 0 || i > len(s:buffer_ids) - 1
+    if i < -1 || i > len(s:buffer_ids) - 1
         echohl ErrorMsg
         echom "Invalid buffer index"
         echohl None
@@ -429,4 +470,40 @@ function! buffet#bonly(bang, buffer)
 
         call buffet#bwipe(a:bang, b)
     endfor
+endfunction
+
+function! buffet#getidx()
+    let index = 0
+    let bufidx = -1
+    let bufnum = len(s:buffer_ids)
+    while index < bufnum
+        if bufnr() == s:buffer_ids[index]
+            let bufidx = index + 1
+        endif
+        let index += 1
+    endwhile
+    return [bufidx, bufnum]
+endfunction
+
+function buffet#prevbuf() abort
+    let [buf_idx,buf_num] = buffet#getidx()
+    let buf_idx = buf_idx == 1 ? buf_num : buf_idx-1
+    call buffet#bswitch(printf("%d", buf_idx))
+endfunction
+
+function buffet#nextbuf() abort
+    let [buf_idx,buf_num] = buffet#getidx()
+    let buf_idx = buf_idx == buf_num ? 1 : buf_idx+1
+    call buffet#bswitch(printf("%d", buf_idx))
+endfunction
+
+function buffet#firstbuf() abort
+    let buf_idx = 1
+    call buffet#bswitch(printf("%d", buf_idx))
+endfunction
+
+function buffet#lastbuf() abort
+    let [buf_idx,buf_num] = buffet#getidx()
+    let buf_idx = buf_num
+    call buffet#bswitch(printf("%d", buf_idx))
 endfunction
